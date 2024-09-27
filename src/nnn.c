@@ -1235,7 +1235,7 @@ static char *abspath(const char *filepath, char *cwd, char *buf)
 		cwd = home;
 		path += 2; /* advance 2 bytes past the "~/" */
 	} else if ((path[0] != '/') && !cwd) {
-		cwd = getcwd(NULL, 0);
+		cwd = getcwd(NULL, 0); // NOLINT
 		if (!cwd)
 			return NULL;
 		allocated = TRUE;
@@ -1426,6 +1426,12 @@ static void msg(const char *message)
 	fprintf(stderr, "%s\n", message);
 }
 
+static void clearinfoln(void)
+{
+	move(xlines - 2, 0);
+	clrtoeol();
+}
+
 #ifdef KEY_RESIZE
 static void handle_key_resize(void)
 {
@@ -1436,9 +1442,7 @@ static void handle_key_resize(void)
 /* Clear the old prompt */
 static void clearoldprompt(void)
 {
-	// clear info line
-	move(xlines - 2, 0);
-	clrtoeol();
+	clearinfoln();
 
 	tolastln();
 	clrtoeol();
@@ -2474,7 +2478,7 @@ static int spawn(char *file, char *arg1, char *arg2, char *arg3, ushort_t flag)
 
 			if (flag & F_NOSTDIN)
 				dup2(fd, STDIN_FILENO);
-			dup2(fd, STDOUT_FILENO);
+			dup2(fd, STDOUT_FILENO); // NOLINT
 			dup2(fd, STDERR_FILENO);
 			close(fd);
 		} else if (flag & F_TTY) {
@@ -3562,6 +3566,7 @@ static int filterentries(char *path, char *lastname)
 		showfilter(ln);
 	}
 end:
+	clearinfoln();
 
 	/* Save last working filter in-filter */
 	if (ln[1])
@@ -4778,7 +4783,7 @@ static bool handle_archive(char *fpath /* in-out param */, char op)
 				return FALSE;
 			}
 			/* Copy the new dir path to open it in smart context */
-			outdir = getcwd(NULL, 0);
+			outdir = getcwd(NULL, 0); // NOLINT
 			x_to = TRUE;
 		}
 	}
@@ -6497,8 +6502,10 @@ static void statusbar(char *path)
 	} else { /* light or detail mode */
 		char sort[] = "\0\0\0\0\0";
 
-		if (getorderstr(sort))
-			addstr(sort);
+		if (cfg.filtermode)
+			addch('F');
+
+		getorderstr(sort) ? addstr(sort) : addch(' ');
 
 		/* Timestamp */
 		print_time(&pent->sec, pent->flags);
@@ -6826,7 +6833,7 @@ static bool browse(char *ipath, const char *session, int pkey)
 		/* If the initial path is a file, retain a way to return to start dir */
 		if (g_state.initfile) {
 			free(initpath);
-			initpath = ipath = getcwd(NULL, 0);
+			initpath = ipath = getcwd(NULL, 0); // NOLINT
 		}
 		path = g_ctx[0].c_path; /* current directory */
 
@@ -8574,7 +8581,7 @@ int main(int argc, char *argv[])
 	mmask_t mask;
 	char *middle_click_env = xgetenv(env_cfg[NNN_MCLICK], "\0");
 
-	middle_click_key = (middle_click_env[0] == '^' && middle_click_env[1])
+	middle_click_key = ((middle_click_env[0] == '^') && middle_click_env[1])
 			    ? CONTROL(middle_click_env[1])
 			    : (uchar_t)middle_click_env[0];
 #endif
@@ -8825,7 +8832,7 @@ int main(int argc, char *argv[])
 			/* Start in the current directory */
 			char *startpath = getenv("PWD");
 
-			initpath = (startpath && *startpath) ? xstrdup(startpath) : getcwd(NULL, 0);
+			initpath = (startpath && *startpath) ? xstrdup(startpath) : getcwd(NULL, 0); // NOLINT
 			if (!initpath)
 				initpath = "/";
 		} else { /* Open a file */
